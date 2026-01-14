@@ -22,7 +22,7 @@ pub fn init_repo() -> Result<(), Error> {
     fs::create_dir_all(&heads_path)?;
 
     // HEAD file
-    let head_file = heads_path.join("HEAD");
+    let head_file = root.join("HEAD");
     create_head(&head_file)?;
 
     Ok(())
