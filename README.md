@@ -1,3 +1,5 @@
+![OGit](assets/ogit.png)
+
 # ogit — Minimal Git-like Object Store (Rust)
 
 `ogit` è un mini progetto CLI scritto in Rust che implementa un object store
@@ -12,10 +14,9 @@ evitando strutture artificiali.
 Questo repository è sviluppato incrementalmente.
 
 **STEP 1 completato:**
+
 - inizializzazione repository (`ogit init`)
 - helper di hashing deterministico su byte slice (`hash_bytes`)
-
-
 
 ## Requisiti
 
