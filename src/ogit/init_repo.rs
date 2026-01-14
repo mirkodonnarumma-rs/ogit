@@ -1,31 +1,42 @@
-use std::{fs, io::Error, path::PathBuf};
+use std::{
+    fs::{self, File},
+    io::{Error, Write},
+    path::{Path},
+};
 
-pub fn init_repo() -> Result<Vec<PathBuf>, Error> {
-    let mut path_to_be_created = Vec::new();
+pub fn init_repo() -> Result<(), Error> {
+    let root = Path::new(".ogit");
 
-    // Create object directory
-    let mut objects = PathBuf::from(".ogit/");
-    objects.push("objects");
-    fs::create_dir_all(&objects)?;
-    path_to_be_created.push(objects);
-    
-    // Create refs directory
-    let mut refs = PathBuf::from(".ogit/");
-    refs.push("refs");
-    fs::create_dir_all(&refs)?;
-    path_to_be_created.push(refs);
+    if root.exists() {
+        eprintln!("Cartella già presente.");
+        return Ok(());
+    }
 
-    // Create heads inside refs directory
-    let mut refs = PathBuf::from(".ogit/");
-    refs.push("refs/heads");
-    fs::create_dir_all(&refs)?;
-    path_to_be_created.push(refs);
+    fs::create_dir_all(root)?;
 
-    // Create refs directory
-    let mut head = PathBuf::from(".ogit/");
-    head.push("refs");
-    fs::create_dir_all(&head)?;
-    path_to_be_created.push(head);
+    // objects
+    fs::create_dir_all(root.join("objects"))?;
 
-    Ok(path_to_be_created)
+    // refs/heads
+    let heads_path = root.join("refs/heads");
+    fs::create_dir_all(&heads_path)?;
+
+    // HEAD file
+    let head_file = heads_path.join("HEAD");
+    create_head(&head_file)?;
+
+    Ok(())
+}
+
+fn create_head(path: &Path) -> Result<(), Error> {
+    let content = b"ref: refs/heads/master\n";
+
+    if path.exists() {
+        eprintln!("File già presente.");
+        return Ok(());
+    }
+
+    let mut f = File::create(path)?;
+    f.write_all(content)?;
+    Ok(())
 }
