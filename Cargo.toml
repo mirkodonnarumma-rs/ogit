@@ -3,5 +3,20 @@ name = "ogit"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "ogit"
+path = "src/ogit/mod.rs"
+
+[[bin]]
+name = "ogit"
+path = "src/main.rs"
+
 [dependencies]
+hex-literal = "1.1.0"
 sha2 = "0.10.9"
+
+[profile.release]
+lto = true
+split-debuginfo = "unpacked"
+codegen-units = 1
+strip = true
