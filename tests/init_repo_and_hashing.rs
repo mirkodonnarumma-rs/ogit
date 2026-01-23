@@ -6,7 +6,7 @@ use std::path::Path;
 use std::fs;
 use std::sync::Mutex;
 
-use ogit::hashing_values::hash_bytes;
+use ogit::hashing_values::{bytes_to_hex, hash_bytes};
 use ogit::initialize_repository::init_repo;
 
 /// Mutex globale per sincronizzare i test del filesystem
@@ -156,3 +156,11 @@ fn test_hash_bytes_produces_32_bytes() {
         );
     }
 }
+
+/// Test C4: bytes_to_hex produce Stringa di esadecimali
+#[test]
+fn test_bytes_to_hex() {
+    assert_eq!(bytes_to_hex(&[0xab, 0xcd, 0x12]), "abcd12");
+    assert_eq!(bytes_to_hex(&[0x00, 0xff]), "00ff");
+    assert_eq!(bytes_to_hex(&[]), "");
+    }
