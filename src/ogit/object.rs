@@ -20,6 +20,8 @@ impl OObjectType {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+//<type> <size>\0<data>
+// example blob 5\0Hello
 pub struct OObject {
     pub kind: OObjectType,
     pub data: Vec<u8>,
