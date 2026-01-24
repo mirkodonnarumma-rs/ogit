@@ -12,19 +12,22 @@ pub fn write_object(store_path: &Path, obj: &OObject) -> Result<OObjectId, Strin
     // 5. Crea subdirectory se non esiste
     // 6. Scrivi file (se non esiste già)
     // 7. Restituisci OObjectId
+    
     let ser = obj.serialize();
     let hashed_ser = hash_bytes(&ser);
     let hashed_hexed = bytes_to_hex(&hashed_ser);
+
     let (subdir, filename) = hashed_hexed.split_at(2);
-    let path = store_path.join("objects");
-    let path = path.join(subdir);
-    let file_path = path.join(filename);
-    create_dir_all(&path)
-        .map_err(|e| format!("Failed to create dir: {}", e))?;
+    let dir_path = store_path.join("objects").join(subdir);
+    let file_path = dir_path.join(filename);
+
+    create_dir_all(&dir_path)
+        .map_err(|e| format!("Failed to create dir: {e}"))?;
+
     // Evita scritture inutili su BLOB grandi
     if !file_path.exists() {
     write(&file_path, &ser)
-        .map_err(|e| format!("Failed to write: {}", e))?;
+        .map_err(|e| format!("Failed to write: {e}"))?;
     }
     
     Ok(OObjectId(hashed_hexed))

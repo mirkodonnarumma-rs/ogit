@@ -1,6 +1,6 @@
-//!OObjectType   — enum con varianti Blob, Tree, Commit
-//!OObjectId     — newtype su String (hex hash)
-//!OObject       — struct con kind: OObjectType, data: Vec<u8>
+//!`OObjectType`   — enum con varianti Blob, Tree, Commit
+//!`OObjectId`     — newtype su String (hex hash)
+//!`OObject`       — struct con kind: `OObjectType`, data: Vec<u8>
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OObjectType {
@@ -10,11 +10,12 @@ pub enum OObjectType {
 }
 
 impl OObjectType {
-    pub fn as_str(&self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            OObjectType::Blob => "blob",
-            OObjectType::Tree => "tree",
-            OObjectType::Commit => "commit",
+            Self::Blob => "blob",
+            Self::Tree => "tree",
+            Self::Commit => "commit",
         }
     }
 }
@@ -28,17 +29,21 @@ pub struct OObject {
 }
 
 impl OObject {
-    pub fn new_blob(data: Vec<u8>) -> Self {
-        OObject { kind: OObjectType::Blob, data }
+    #[must_use]
+    pub const fn new_blob(data: Vec<u8>) -> Self {
+        Self { kind: OObjectType::Blob, data }
     }
 
-    pub fn new_tree(data: Vec<u8>) -> Self {
-        OObject { kind: OObjectType::Tree, data }
+    #[must_use]
+    pub const fn new_tree(data: Vec<u8>) -> Self {
+        Self { kind: OObjectType::Tree, data }
     }
 
-    pub fn new_commit(data: Vec<u8>) -> Self {
-        OObject { kind: OObjectType::Commit, data }
+    #[must_use]
+    pub const fn new_commit(data: Vec<u8>) -> Self {
+        Self { kind: OObjectType::Commit, data }
     }
+    #[must_use]
     pub fn serialize(&self) -> Vec<u8> {
         let header = format!("{} {}\0", self.kind.as_str(), self.data.len());
         let mut result = header.into_bytes();
@@ -85,7 +90,7 @@ impl OObject {
         }
         
         // 7. Costruisci OObject
-        Ok(OObject {
+        Ok(Self {
             kind,
             data: data.to_vec(),  // &[u8] → Vec<u8>
         })
@@ -96,7 +101,8 @@ impl OObject {
 pub struct OObjectId(pub String);
 
 impl OObjectId {
-    pub fn as_str(&self) -> &str {
+    #[must_use]
+    pub const fn as_str(&self) -> &str {
         self.0.as_str()
     }
 }
