@@ -1,7 +1,26 @@
 use std::path::Path;
-use std::fs::{create_dir_all, write};
+use std::fs::{create_dir_all, read, write};
+
 use super::object::{OObject, OObjectId};
 use super::hashing_values::{hash_bytes, bytes_to_hex};
+
+pub fn read_object(store_path: &Path, id: &OObjectId) -> Result<OObject, String> {
+    /* Algoritmo */
+    // Estrai hash hex da OObjectId
+    // Splitta: primi 2 char = subdir, resto = filename
+    // Costruisci path completo
+    // Leggi bytes da file
+    // Deserializza in OObject
+    // Restituisci
+    
+    let hash_hex = id.as_str();
+    let (subdir, filename) = hash_hex.split_at(2);
+    let file_path = store_path.join("objects").join(subdir).join(filename);
+    let file_content = read(file_path)
+        .map_err(|e| format!("Failed to read file: {e}"))?;
+    let data = OObject::deserialize(&file_content);
+    data
+}
 
 pub fn write_object(store_path: &Path, obj: &OObject) -> Result<OObjectId, String> {
     /* Algoritmo */
@@ -38,6 +57,20 @@ mod tests {
     use super::*;
     use std::env;
     use std::fs;
+
+    #[test]
+    fn test_write_then_read_object() {
+        let temp_dir = env::temp_dir().join(format!("ogit_test_rw_{}", std::process::id()));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let original = OObject::new_blob(b"roundtrip test".to_vec());
+        let id = write_object(&temp_dir, &original).unwrap();
+        let loaded = read_object(&temp_dir, &id).unwrap();
+
+        assert_eq!(original, loaded);
+
+        fs::remove_dir_all(&temp_dir).unwrap();
+    }
 
     #[test]
     fn test_write_object_creates_file() {
