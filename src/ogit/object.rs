@@ -2,6 +2,76 @@
 //!`OObjectId`     — newtype su String (hex hash)
 //!`OObject`       — struct con kind: `OObjectType`, data: Vec<u8>
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeEntry {
+    pub kind: OObjectType,    // Blob o Tree
+    pub hash: OObjectId,      // hash dell'oggetto
+    pub name: String,         // nome file/directory
+}
+
+impl TreeEntry {
+    pub fn new(kind: OObjectType, hash: OObjectId, name: String) -> Self {
+        Self { kind, hash, name }
+    }
+    pub fn to_line(&self) -> String {
+        // formato: "<type> <hash> <name>"
+        format!("{} {} {}", self.kind.as_str(), self.hash.as_str(), self.name)
+    }
+    pub fn serialize_tree(entries: &[TreeEntry]) -> Vec<u8> {
+        // 1. Ordina entries per nome (alfabetico)
+        // 2. Converti ogni entry in linea
+        // 3. Unisci con \n
+        // 4. Converti in bytes
+        let mut sorted = entries.to_vec();
+        sorted.sort_by(|a, b| a.name.cmp(&b.name));
+        sorted.iter()
+            .map(|e| e.to_line())
+            .collect::<Vec<_>>()
+            .join("\n")
+            .into_bytes()
+    }
+    /// **Algoritmo per parsare una singola linea:**
+    ///        "blob a1b2c3... readme.txt"
+    ///        │     │         │
+    ///        │     │         └── name (tutto dopo secondo spazio)
+    ///        │     └── hash (secondo token)
+    ///        └── type (primo token) 
+    pub fn deserialize_tree(bytes: &[u8]) -> Result<Vec<TreeEntry>, String> {
+        // 1. Converti bytes in stringa UTF-8
+        // 2. Splitta per \n
+        // 3. Per ogni linea, parsa in TreeEntry
+        // 4. Raccogli in Vec
+        let content = std::str::from_utf8(bytes)
+            .map_err(|_| "Invalid UTF-8 in tree")?;
+        
+        let mut entries = Vec::new();
+        
+        for line in content.lines() {
+            if line.is_empty() {
+                continue;
+            }
+            
+            let parts: Vec<&str> = line.splitn(3, ' ').collect();
+            if parts.len() != 3 {
+                return Err(format!("Invalid tree entry: {}", line));
+            }
+            
+            let kind = match parts[0] {
+                "blob" => OObjectType::Blob,
+                "tree" => OObjectType::Tree,
+                _ => return Err(format!("Unknown type: {}", parts[0])),
+            };
+            
+            let hash = OObjectId(parts[1].to_string());
+            let name = parts[2].to_string();
+            
+            entries.push(TreeEntry { kind, hash, name });
+    }
+    
+    Ok(entries)
+}
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OObjectType {
     Blob,
