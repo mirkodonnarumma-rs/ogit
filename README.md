@@ -38,7 +38,7 @@ Queste scelte sono intenzionali per evitare dangling references e coupling prema
 ## Roadmap
 
 - [x] STEP 1 — init repository + hashing
-- [ ] STEP 2 — blob object (read/write)
+- [x] STEP 2 — blob object (read/write)
 - [ ] STEP 3 — tree object
 - [ ] STEP 4 — commit object
 - [ ] STEP 5 — CLI polish
