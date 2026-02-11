@@ -18,6 +18,12 @@ Questo repository è sviluppato incrementalmente.
 - inizializzazione repository (`ogit init`)
 - helper di hashing deterministico su byte slice (`hash_bytes`)
 
+**STEP 2 completato:**
+
+- scrittura blob object su disco (`write_object`)
+- lettura blob object da disco (`read_object`)
+- comandi CLI `ogit store <file>` e `ogit cat <hash>`
+
 ## Requisiti
 
 - Rust stable
@@ -34,6 +40,17 @@ Questo repository è sviluppato incrementalmente.
   - non espone lifetime esplicite
 
 Queste scelte sono intenzionali per evitare dangling references e coupling prematuro.
+
+## Scelte di design (STEP 2)
+
+- Il formato on-disk è compatibile con Git: `<type> <size>\0<data>` (es. `blob 13\0Hello, world!`).
+- La directory sharding segue lo schema Git: i primi 2 caratteri hex dell'hash diventano la subdirectory, i restanti il filename (`.ogit/objects/ab/cd1234...`).
+- Le scritture sono idempotenti: se il file esiste già non viene riscritto, evitando I/O inutile su blob grandi.
+- `OObjectId` è un newtype su `String` che previene confusione con stringhe generiche.
+- La conversione hex è ottimizzata con una singola allocazione tramite `fold` + `String::with_capacity`.
+- Nessun lifetime esplicito nell'API pubblica: gli input sono borrowed (`&Path`, `&OObject`, `&OObjectId`), i valori di ritorno sono sempre owned (`OObject`, `OObjectId`).
+- La deserializzazione valida il formato (header, separatore null, corrispondenza size/data) e restituisce errori descrittivi.
+- I comandi CLI `store` e `cat` delegano tutta la logica al core (`ogit`), mantenendo `main.rs` come thin layer.
 
 ## Roadmap
 
