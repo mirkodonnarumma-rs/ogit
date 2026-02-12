@@ -12,6 +12,7 @@ use std::process;
 use ogit::initialize_repository::init_repo;
 use ogit::object::{OObject, OObjectId};
 use ogit::store::{read_object, write_object};
+use ogit::tree::build_tree_from_dir;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -32,6 +33,7 @@ fn main() {
         "init" => cmd_init(),
         "store" => cmd_store(&args[2..]),
         "cat" => cmd_cat(&args[2..]),
+        "write-tree" => cmd_write_tree(&args[2..]),
         _ => {
             eprintln!("Unknown command: {}", command);
             process::exit(1);
@@ -94,6 +96,20 @@ fn cmd_cat(args: &[String]) -> Result<(), String> {
         Ok(text) => println!("{}", text),
         Err(_) => println!("{:?}", obj.data),
     }
+    
+    Ok(())
+}
+
+fn cmd_write_tree(args: &[String]) -> Result<(), String> {
+    if args.is_empty() {
+        return Err("Usage: ogit write-tree <dir>".into());
+    }
+    
+    let dir_path = Path::new(&args[0]);
+    let store_path = Path::new(".ogit");
+    
+    let id = build_tree_from_dir(store_path, dir_path)?;
+    println!("{}", id.as_str());
     
     Ok(())
 }
