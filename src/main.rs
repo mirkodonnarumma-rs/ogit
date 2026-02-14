@@ -11,7 +11,7 @@ use std::process;
 
 use ogit::initialize_repository::init_repo;
 use ogit::object::{OObject, OObjectId};
-use ogit::store::{read_object, write_object};
+use ogit::store::{read_object, write_object, create_commit};
 use ogit::tree::build_tree_from_dir;
 
 fn main() {
@@ -34,6 +34,7 @@ fn main() {
         "store" => cmd_store(&args[2..]),
         "cat" => cmd_cat(&args[2..]),
         "write-tree" => cmd_write_tree(&args[2..]),
+        "commit" => cmd_commit(&args[2..]),
         _ => {
             eprintln!("Unknown command: {}", command);
             process::exit(1);
@@ -111,5 +112,44 @@ fn cmd_write_tree(args: &[String]) -> Result<(), String> {
     let id = build_tree_from_dir(store_path, dir_path)?;
     println!("{}", id.as_str());
     
+    Ok(())
+}
+
+fn cmd_commit(args: &[String]) -> Result<(), String> {
+    // Parsing: -m "message"
+    if args.len() < 2 || args[0] != "-m" {
+        return Err("Usage: ogit commit -m \"message\"".into());
+    }
+    let message = &args[1];
+    
+    let store_path = Path::new(".ogit");
+    
+    // 1. Costruisci tree dalla directory corrente
+    let tree_id = build_tree_from_dir(store_path, Path::new("."))?;
+    
+    // 2. Leggi parent da .ogit/HEAD (se esiste)
+    let head_path = store_path.join("HEAD");
+    let parent = if head_path.exists() {
+        let content = std::fs::read_to_string(&head_path)
+            .map_err(|e| format!("Failed to read HEAD: {}", e))?;
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(OObjectId(trimmed.to_string()))
+        }
+    } else {
+        None
+    };
+    
+    // 3. Crea commit
+    let author = "Default Author";  // per ora semplificato
+    let commit_id = create_commit(store_path, &tree_id, parent.as_ref(), author, message)?;
+    
+    // 4. Aggiorna .ogit/HEAD col nuovo hash
+    std::fs::write(&head_path, commit_id.as_str())
+        .map_err(|e| format!("Failed to write HEAD: {}", e))?;
+    
+    println!("{}", commit_id.as_str());
     Ok(())
 }
