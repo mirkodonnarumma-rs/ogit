@@ -8,9 +8,10 @@ use std::env;
 use std::fs::read;
 use std::path::Path;
 use std::process;
+use std::str::from_utf8;
 
 use ogit::initialize_repository::init_repo;
-use ogit::object::{OObject, OObjectId};
+use ogit::object::{Commit, OObject, OObjectId, OObjectType, TreeEntry};
 use ogit::store::{read_object, write_object, create_commit};
 use ogit::tree::build_tree_from_dir;
 
@@ -35,6 +36,9 @@ fn main() {
         "cat" => cmd_cat(&args[2..]),
         "write-tree" => cmd_write_tree(&args[2..]),
         "commit" => cmd_commit(&args[2..]),
+        "show" => cmd_show(&args[2..]),
+        "ls-objects" => cmd_ls_objects(&args[2..]),
+        "log" => cmd_log(&args[2..]),
         _ => {
             eprintln!("Unknown command: {}", command);
             process::exit(1);
@@ -93,9 +97,50 @@ fn cmd_cat(args: &[String]) -> Result<(), String> {
     let obj = read_object(store_path, &id)?;
 
     // Prova a stampare come UTF-8, altrimenti mostra hex
-    match std::str::from_utf8(&obj.data) {
+    match from_utf8(&obj.data) {
         Ok(text) => println!("{}", text),
         Err(_) => println!("{:?}", obj.data),
+    }
+    
+    Ok(())
+}
+
+/// Differenza da cat: show mostra anche il tipo dell'oggetto e formatta meglio l'output.
+fn cmd_show(args: &[String]) -> Result<(), String> {
+    if args.is_empty() {
+        return Err("Usage: ogit show <hash>".into());
+    }
+    
+    let id = OObjectId(args[0].clone());
+    let store_path = Path::new(".ogit");
+    let obj = read_object(store_path, &id)?;
+    
+    println!("type: {}", obj.kind.as_str());
+    println!("size: {}", obj.data.len());
+    println!("---");
+    
+    match obj.kind {
+        OObjectType::Blob => {
+            match from_utf8(&obj.data) {
+                Ok(text) => println!("{}", text),
+                Err(_) => println!("[binary data, {} bytes]", obj.data.len()),
+            }
+        }
+        OObjectType::Tree => {
+            let entries = TreeEntry::deserialize_tree(&obj.data)?;
+            for entry in entries {
+                println!("{} {} {}", entry.kind.as_str(), entry.hash.as_str(), entry.name);
+            }
+        }
+        OObjectType::Commit => {
+            let commit = Commit::deserialize(&obj.data)?;
+            println!("tree:    {}", commit.tree.as_str());
+            if let Some(parent) = &commit.parent {
+                println!("parent:  {}", parent.as_str());
+            }
+            println!("author:  {}", commit.author);
+            println!("message: {}", commit.message);
+        }
     }
     
     Ok(())
@@ -127,16 +172,16 @@ fn cmd_commit(args: &[String]) -> Result<(), String> {
     // 1. Costruisci tree dalla directory corrente
     let tree_id = build_tree_from_dir(store_path, Path::new("."))?;
     
-    // 2. Leggi parent da .ogit/HEAD (se esiste)
+    // 2. Leggi parent da HEAD (se esiste e contiene hash valido)
     let head_path = store_path.join("HEAD");
     let parent = if head_path.exists() {
         let content = std::fs::read_to_string(&head_path)
             .map_err(|e| format!("Failed to read HEAD: {}", e))?;
         let trimmed = content.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
+        if trimmed.len() == 64 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
             Some(OObjectId(trimmed.to_string()))
+        } else {
+            None
         }
     } else {
         None
@@ -151,5 +196,75 @@ fn cmd_commit(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("Failed to write HEAD: {}", e))?;
     
     println!("{}", commit_id.as_str());
+    Ok(())
+}
+
+fn cmd_ls_objects(_args: &[String]) -> Result<(), String> {
+    let objects_path = Path::new(".ogit/objects");
+    
+    if !objects_path.exists() {
+        return Err("No .ogit repository found".into());
+    }
+    
+    let subdirs = std::fs::read_dir(objects_path)
+        .map_err(|e| format!("Failed to read objects: {}", e))?;
+    
+    for subdir in subdirs {
+        let subdir = subdir.map_err(|e| e.to_string())?;
+        let subdir_name = subdir.file_name().to_string_lossy().to_string();
+        
+        if !subdir.path().is_dir() {
+            continue;
+        }
+        
+        let files = std::fs::read_dir(subdir.path())
+            .map_err(|e| e.to_string())?;
+        
+        for file in files {
+            let file = file.map_err(|e| e.to_string())?;
+            let filename = file.file_name().to_string_lossy().to_string();
+            let hash = format!("{}{}", subdir_name, filename);
+            
+            // Leggi tipo oggetto
+            let id = OObjectId(hash.clone());
+            let obj = read_object(Path::new(".ogit"), &id)?;
+            
+            println!("{} {}", obj.kind.as_str(), hash);
+        }
+    }
+    
+    Ok(())
+}
+
+fn cmd_log(_args: &[String]) -> Result<(), String> {
+    let store_path = Path::new(".ogit");
+    let head_path = store_path.join("HEAD");
+    
+    if !head_path.exists() {
+        return Err("No commits yet".into());
+    }
+    
+    let mut current_hash = std::fs::read_to_string(&head_path)
+        .map_err(|e| format!("Failed to read HEAD: {}", e))?
+        .trim()
+        .to_string();
+    
+    while !current_hash.is_empty() {
+        let id = OObjectId(current_hash.clone());
+        let obj = read_object(store_path, &id)?;
+        let commit = Commit::deserialize(&obj.data)?;
+        
+        println!("commit {}", current_hash);
+        println!("Author: {}", commit.author);
+        println!();
+        println!("    {}", commit.message);
+        println!();
+        
+        current_hash = match commit.parent {
+            Some(parent) => parent.0,
+            None => break,
+        };
+    }
+    
     Ok(())
 }
