@@ -11,7 +11,7 @@ evitando strutture artificiali.
 
 ## Stato del progetto
 
-Questo repository è sviluppato incrementalmente.
+**v0.1.0 — Progetto completato.**
 
 **STEP 1 completato:**
 
@@ -38,11 +38,27 @@ Questo repository è sviluppato incrementalmente.
 - funzione `create_commit` per creazione e persistenza
 - comando CLI `ogit commit -m "message"` con tracking HEAD
 
+**STEP 5 completato:**
+
+- comando `ogit show <hash>` per visualizzazione formattata di oggetti
+- comando `ogit ls-objects` per elencare tutti gli oggetti nello store
+- comando `ogit log` per cronologia commit da HEAD
+
+**STEP 6 completato:**
+
+- script di integrazione `scripts/demo.sh` per test end-to-end
+- copertura completa del flusso init → store → write-tree → commit → log
+
+**STEP 7 completato:**
+
+- documentazione errori borrow checker in `BORROW_CHECKER_NOTES.md`
+- refactoring: rimossi `.unwrap()`, semplificati return, fix import ridondanti
+
 ## Requisiti
 
 - Rust stable
 - Nessuna dipendenza obbligatoria oltre `std`
-- CLI implementata manualmente (senza `clap` nelle prime fasi)
+- CLI implementata manualmente (senza `clap`)
 
 ## Scelte di design (STEP 1)
 
@@ -78,8 +94,14 @@ Queste scelte sono intenzionali per evitare dangling references e coupling prema
 
 - Il formato commit è testuale con campi prefissati: `tree`, `parent` (opzionale), `author`, `message`.
 - Il campo `parent` è `Option<OObjectId>`: `None` per il primo commit, `Some(hash)` per i successivi.
-- Il file `.ogit/HEAD` memorizza l'hash del commit corrente come reference semplice.
+- Il file `.ogit/HEAD` memorizza l'hash del commit corrente come reference semplice (no refs simbolici).
 - `create_commit` è una funzione pura che costruisce, serializza e persiste il commit atomicamente.
+
+## Scelte di design (STEP 5)
+
+- `show` formatta l'output in base al tipo di oggetto (blob, tree, commit).
+- `ls-objects` itera sulle subdirectory di `.ogit/objects/` ricostruendo gli hash.
+- `log` segue la catena di parent fino al commit iniziale (`parent: None`).
 
 ## Roadmap
 
@@ -87,4 +109,6 @@ Queste scelte sono intenzionali per evitare dangling references e coupling prema
 - [x] STEP 2 — blob object (read/write)
 - [x] STEP 3 — tree object
 - [x] STEP 4 — commit object
-- [ ] STEP 5 — CLI polish
+- [x] STEP 5 — CLI polish
+- [x] STEP 6 — integration test
+- [x] STEP 7 — refactoring + docs
