@@ -24,7 +24,7 @@
 use std::fs::{self, read};
 use std::path::Path;
 
-use crate::object::{OObjectId, OObject, TreeEntry};
+use crate::object::{OObject, OObjectId, OObjectType, TreeEntry};
 use crate::store::write_object;
 
 pub fn build_tree_from_dir(store_path: &Path, dir_path: &Path) -> Result<OObjectId, String> {
@@ -50,22 +50,23 @@ pub fn build_tree_from_dir(store_path: &Path, dir_path: &Path) -> Result<OObject
         // 4. Gestisci file vs directory
         if path.is_file() {
             // Leggo il contenuto del file
-            let content = read(&path);
+            let content = read(&path)
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             // Creo un blob
-            let blob = OObject::new_blob(content.unwrap());
+            let blob = OObject::new_blob(content);
             // Scrivo il blob
-            let hash = write_object(store_path, &blob);
+            let hash = write_object(store_path, &blob)?;
             // Inserisco nelle entries
-            entries.push(TreeEntry { kind: crate::object::OObjectType::Blob, hash: hash.unwrap(), name  })
+            entries.push(TreeEntry { kind: OObjectType::Blob, hash, name });
             
         } else if path.is_dir() {
             let hash = build_tree_from_dir(store_path, &path);
-            entries.push(TreeEntry { kind: crate::object::OObjectType::Tree, hash: hash.unwrap(), name  });
+            entries.push(TreeEntry { kind: OObjectType::Tree, hash: hash.unwrap(), name  });
         }
     }
     
     // 5. Serializza e salva tree
     let tree_data = TreeEntry::serialize_tree(&entries);
     let tree_obj = OObject::new_tree(tree_data);
-    crate::store::write_object(store_path, &tree_obj)
+    write_object(store_path, &tree_obj)
 }

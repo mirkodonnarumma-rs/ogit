@@ -20,8 +20,7 @@ pub fn read_object(store_path: &Path, id: &OObjectId) -> Result<OObject, String>
     let file_path = store_path.join("objects").join(subdir).join(filename);
     let file_content = read(file_path)
         .map_err(|e| format!("Failed to read file: {e}"))?;
-    let data = OObject::deserialize(&file_content);
-    data
+    OObject::deserialize(&file_content)
 }
 
 pub fn write_object(store_path: &Path, obj: &OObject) -> Result<OObjectId, String> {
