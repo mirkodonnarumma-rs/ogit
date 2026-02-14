@@ -176,3 +176,65 @@ impl OObjectId {
         self.0.as_str()
     }
 }
+
+/// Formato payload
+/// ```text
+/// tree <tree_hash>
+/// parent <parent_hash>    ← opzionale
+/// author <name>
+/// message <text>
+/// ```
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Commit {
+    pub tree: OObjectId,
+    pub parent: Option<OObjectId>,
+    pub author: String,
+    pub message: String,
+}
+
+impl Commit {
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut lines = Vec::new();
+        
+        lines.push(format!("tree {}", self.tree.as_str()));
+        
+        if let Some(ref parent) = self.parent {
+            lines.push(format!("parent {}", parent.as_str()));
+        }
+        
+        lines.push(format!("author {}", self.author));
+        lines.push(format!("message {}", self.message));
+        
+        lines.join("\n").into_bytes()
+    }
+
+    pub fn deserialize(bytes: &[u8]) -> Result<Self, String> {
+        let content = std::str::from_utf8(bytes)
+            .map_err(|_| "Invalid UTF-8 in commit")?;
+        
+        let mut tree: Option<OObjectId> = None;
+        let mut parent: Option<OObjectId> = None;
+        let mut author: Option<String> = None;
+        let mut message: Option<String> = None;
+        
+        for line in content.lines() {
+            if let Some(hash) = line.strip_prefix("tree ") {
+                tree = Some(OObjectId(hash.to_string()));
+            } else if let Some(hash) = line.strip_prefix("parent ") {
+                parent = Some(OObjectId(hash.to_string()));
+            } else if let Some(name) = line.strip_prefix("author ") {
+                author = Some(name.to_string());
+            } else if let Some(msg) = line.strip_prefix("message ") {
+                message = Some(msg.to_string());
+            }
+        }
+        
+        Ok(Commit {
+            tree: tree.ok_or("Missing tree")?,
+            parent,
+            author: author.ok_or("Missing author")?,
+            message: message.ok_or("Missing message")?,
+        })
+    }
+}
