@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::fs::{create_dir_all, read, write};
 
+use crate::object::Commit;
+
 use super::object::{OObject, OObjectId};
 use super::hashing_values::{hash_bytes, bytes_to_hex};
 
@@ -52,62 +54,22 @@ pub fn write_object(store_path: &Path, obj: &OObject) -> Result<OObjectId, Strin
     Ok(OObjectId(hashed_hexed))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::env;
-    use std::fs;
-
-    #[test]
-    fn test_write_then_read_object() {
-        let temp_dir = env::temp_dir().join(format!("ogit_test_rw_{}", std::process::id()));
-        fs::create_dir_all(&temp_dir).unwrap();
-
-        let original = OObject::new_blob(b"roundtrip test".to_vec());
-        let id = write_object(&temp_dir, &original).unwrap();
-        let loaded = read_object(&temp_dir, &id).unwrap();
-
-        assert_eq!(original, loaded);
-
-        fs::remove_dir_all(&temp_dir).unwrap();
-    }
-
-    #[test]
-    fn test_write_object_creates_file() {
-        // 1. Setup: directory temporanea unica
-        let temp_dir = env::temp_dir().join(format!("ogit_test_{}", std::process::id()));
-        fs::create_dir_all(&temp_dir).unwrap();
-
-        // 2. Crea e scrivi oggetto
-        let obj = OObject::new_blob(b"test content".to_vec());
-        let id = write_object(&temp_dir, &obj).unwrap();
-
-        // 3. Verifica che il file esista
-        let (subdir, filename) = id.as_str().split_at(2);
-        let file_path = temp_dir.join("objects").join(subdir).join(filename);
-        assert!(file_path.exists(), "Object file should exist");
-
-        // 4. Verifica contenuto
-        let stored_bytes = fs::read(&file_path).unwrap();
-        assert_eq!(stored_bytes, obj.serialize());
-
-        // 5. Cleanup
-        fs::remove_dir_all(&temp_dir).unwrap();
-    }
-
-    #[test]
-    fn test_write_object_is_idempotent() {
-        let temp_dir = env::temp_dir().join(format!("ogit_test_idem_{}", std::process::id()));
-        fs::create_dir_all(&temp_dir).unwrap();
-
-        let obj = OObject::new_blob(b"same content".to_vec());
-        
-        let id1 = write_object(&temp_dir, &obj).unwrap();
-        let id2 = write_object(&temp_dir, &obj).unwrap();
-
-        // Stesso contenuto → stesso hash
-        assert_eq!(id1, id2);
-
-        fs::remove_dir_all(&temp_dir).unwrap();
-    }
+pub fn create_commit(
+    store_path: &Path,
+    tree: &OObjectId,
+    parent: Option<&OObjectId>,
+    author: &str,
+    message: &str,
+) -> Result<OObjectId, String> {
+    /* Algoritmo: */
+    // 1. Costruisci Commit struct
+    // 2. Serializza
+    // 3. Crea OObject::new_commit(payload)
+    // 4. Salva con write_object
+    // 5. Restituisci hash
+    
+    let data = Commit { tree: tree.clone(), parent: parent.cloned(), author: author.to_string(), message: message.to_string() };
+    let commit = OObject::new_commit(data.serialize());
+    write_object(store_path, &commit)
 }
+

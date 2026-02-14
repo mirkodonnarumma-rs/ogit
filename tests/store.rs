@@ -60,3 +60,54 @@ mod tests {
         fs::remove_dir_all(&temp_dir).unwrap();
     }
 }
+
+mod create_commit_tests {
+    use std::env;
+    use std::fs;
+
+    use ogit::object::Commit;
+    use ogit::object::OObjectId;
+    use ogit::store::create_commit;
+    use ogit::store::read_object;
+
+    fn setup_test_dir(name: &str) -> std::path::PathBuf {
+        let dir = env::temp_dir().join(format!("ogit_commit_test_{}_{}", name, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("objects")).unwrap();
+        dir
+    }
+
+    #[test]
+    fn test_create_commit_without_parent() {
+        let store = setup_test_dir("no_parent");
+        let tree_id = OObjectId("abc123def456".to_string());
+        
+        let commit_id = create_commit(&store, &tree_id, None, "Author", "First commit").unwrap();
+        
+        let obj = read_object(&store, &commit_id).unwrap();
+        let commit = Commit::deserialize(&obj.data).unwrap();
+        
+        assert_eq!(commit.tree.as_str(), "abc123def456");
+        assert!(commit.parent.is_none());
+        assert_eq!(commit.author, "Author");
+        assert_eq!(commit.message, "First commit");
+        
+        fs::remove_dir_all(&store).unwrap();
+    }
+
+    #[test]
+    fn test_create_commit_with_parent() {
+        let store = setup_test_dir("with_parent");
+        let tree_id = OObjectId("abc123".to_string());
+        let parent_id = OObjectId("parent789".to_string());
+        
+        let commit_id = create_commit(&store, &tree_id, Some(&parent_id), "Author", "Second commit").unwrap();
+        
+        let obj = read_object(&store, &commit_id).unwrap();
+        let commit = Commit::deserialize(&obj.data).unwrap();
+        
+        assert_eq!(commit.parent.unwrap().as_str(), "parent789");
+        
+        fs::remove_dir_all(&store).unwrap();
+    }
+}

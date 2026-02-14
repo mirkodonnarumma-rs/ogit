@@ -59,7 +59,6 @@ pub fn build_tree_from_dir(store_path: &Path, dir_path: &Path) -> Result<OObject
             entries.push(TreeEntry { kind: crate::object::OObjectType::Blob, hash: hash.unwrap(), name  })
             
         } else if path.is_dir() {
-            // TODO: ricorsione e aggiungi entry
             let hash = build_tree_from_dir(store_path, &path);
             entries.push(TreeEntry { kind: crate::object::OObjectType::Tree, hash: hash.unwrap(), name  });
         }
