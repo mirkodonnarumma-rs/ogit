@@ -24,6 +24,20 @@ Questo repository è sviluppato incrementalmente.
 - lettura blob object da disco (`read_object`)
 - comandi CLI `ogit store <file>` e `ogit cat <hash>`
 
+**STEP 3 completato:**
+
+- struttura `TreeEntry` per rappresentare entry di directory
+- serializzazione/deserializzazione tree con ordinamento alfabetico
+- funzione ricorsiva `build_tree_from_dir` per traversal directory
+- comando CLI `ogit write-tree <dir>`
+
+**STEP 4 completato:**
+
+- struttura `Commit` con tree, parent opzionale, author e message
+- serializzazione/deserializzazione commit
+- funzione `create_commit` per creazione e persistenza
+- comando CLI `ogit commit -m "message"` con tracking HEAD
+
 ## Requisiti
 
 - Rust stable
@@ -52,10 +66,25 @@ Queste scelte sono intenzionali per evitare dangling references e coupling prema
 - La deserializzazione valida il formato (header, separatore null, corrispondenza size/data) e restituisce errori descrittivi.
 - I comandi CLI `store` e `cat` delegano tutta la logica al core (`ogit`), mantenendo `main.rs` come thin layer.
 
+## Scelte di design (STEP 3)
+
+- Il formato tree è testuale: `<type> <hash> <name>\n` per ogni entry.
+- Le entry sono ordinate alfabeticamente per nome prima della serializzazione.
+- Il parsing usa `splitn(3, ' ')` per supportare filename con spazi.
+- La directory `.ogit` viene ignorata durante il traversal ricorsivo.
+- La ricorsione separa chiaramente `store_path` (dove salvare oggetti) da `dir_path` (cosa processare).
+
+## Scelte di design (STEP 4)
+
+- Il formato commit è testuale con campi prefissati: `tree`, `parent` (opzionale), `author`, `message`.
+- Il campo `parent` è `Option<OObjectId>`: `None` per il primo commit, `Some(hash)` per i successivi.
+- Il file `.ogit/HEAD` memorizza l'hash del commit corrente come reference semplice.
+- `create_commit` è una funzione pura che costruisce, serializza e persiste il commit atomicamente.
+
 ## Roadmap
 
 - [x] STEP 1 — init repository + hashing
 - [x] STEP 2 — blob object (read/write)
-- [ ] STEP 3 — tree object
-- [ ] STEP 4 — commit object
+- [x] STEP 3 — tree object
+- [x] STEP 4 — commit object
 - [ ] STEP 5 — CLI polish
