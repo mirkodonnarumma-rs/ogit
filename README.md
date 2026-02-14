@@ -112,3 +112,7 @@ Queste scelte sono intenzionali per evitare dangling references e coupling prema
 - [x] STEP 5 — CLI polish
 - [x] STEP 6 — integration test
 - [x] STEP 7 — refactoring + docs
+
+## License
+
+Licensed under [MIT license](LICENSE).
